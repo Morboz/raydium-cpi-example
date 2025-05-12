@@ -18,6 +18,7 @@ idl-build = ["anchor-lang/idl-build", "anchor-spl/idl-build"]
 devnet = ["raydium-amm-cpi/devnet"]
 
 [dependencies]
-anchor-lang = "=0.31.0"
-anchor-spl = "=0.31.0"
-raydium-amm-cpi = { git = "https://github.com/raydium-io/raydium-cpi", package = "raydium-amm-cpi", branch = "anchor-0.31.0" }
+anchor-lang = "=0.31.1"
+anchor-spl = "=0.31.1"
+raydium-amm-cpi = { git = "https://github.com/Morboz/raydium-cpi", package = "raydium-amm-cpi", branch = "anchor-0.31.1" }
+proc-macro2 = "=1.0.95"
