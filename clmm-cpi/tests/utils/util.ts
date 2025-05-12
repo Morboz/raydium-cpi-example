@@ -92,10 +92,13 @@ export async function createTokenMintAndAssociatedTokenAccount(
 
   token0 = tokenArray[0].address;
   token1 = tokenArray[1].address;
-  //   console.log("Token 0", token0.toString());
-  //   console.log("Token 1", token1.toString());
+  console.log("Token 0", token0.toString());
+  console.log("Token 1", token1.toString());
   const token0Program = tokenArray[0].program;
   const token1Program = tokenArray[1].program;
+  // console.log("Token 0 program", token0Program.toString());
+  // console.log("Token 1 program", token1Program.toString());
+  console.log("payer", payer.publicKey.toString());
 
   const ownerToken0Account = await getOrCreateAssociatedTokenAccount(
     connection,
@@ -120,10 +123,10 @@ export async function createTokenMintAndAssociatedTokenAccount(
     token0Program
   );
 
-  // console.log(
-  //   "ownerToken0Account key: ",
-  //   ownerToken0Account.address.toString()
-  // );
+  console.log(
+    "ownerToken0Account key: ",
+    ownerToken0Account.address.toString()
+  );
 
   const ownerToken1Account = await getOrCreateAssociatedTokenAccount(
     connection,
@@ -135,10 +138,10 @@ export async function createTokenMintAndAssociatedTokenAccount(
     { skipPreflight: true },
     token1Program
   );
-  // console.log(
-  //   "ownerToken1Account key: ",
-  //   ownerToken1Account.address.toString()
-  // );
+  console.log(
+    "ownerToken1Account key: ",
+    ownerToken1Account.address.toString()
+  );
   await mintTo(
     connection,
     payer,

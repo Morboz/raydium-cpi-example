@@ -31,6 +31,45 @@ import {
   getTickArrayBitmapAddress,
 } from "./pda";
 
+// 添加到文件顶部的 import 部分
+import { AccountInfo } from "@solana/web3.js";
+
+
+// 在 initialize 函数内添加此函数调用
+async function checkAccountsExistence(
+  connection: Connection,
+  accounts: { name: string; pubkey: PublicKey }[]
+): Promise<void> {
+  console.log("Checking accounts existence...");
+  
+  // 使用 getMultipleAccountsInfo 批量获取账户信息
+  const accountInfos = await connection.getMultipleAccountsInfo(
+    accounts.map(a => a.pubkey)
+  );
+  
+  // 检查每个账户
+  for (let i = 0; i < accounts.length; i++) {
+    const account = accounts[i];
+    const info = accountInfos[i];
+    
+    if (!info) {
+      console.log(`✕ Account ${account.name} does not exist: ${account.pubkey.toString()}`);
+    } else {
+      console.log(`✓ Account ${account.name} exists (size: ${info.data.length} bytes)`);
+      
+      // 可选：添加更多检查，例如检查所有者
+      if (account.name === "ammConfig") {
+        console.log(`  Owner: ${info.owner.toString()}`);
+        console.log(`  Executable: ${info.executable}`);
+        if (info.owner.toString() !== ClmmProgram.toString()) {
+          console.warn(`  WARNING: AmmConfig is not owned by ClmmProgram!`);
+        }
+      }
+    }
+  }
+  console.log("Account check completed.");
+}
+
 export async function setupInitializeTest(
   connection: Connection,
   owner: Signer,
@@ -66,13 +105,15 @@ export async function initialize(
   confirmOptions?: ConfirmOptions
 ) {
   // const [ammConfigAddress, _bump] = await getAmmConfigAddress(0, ClmmProgram);
-  // console.log("ammConfigAddress:", ammConfigAddress.toString());
+  console.log("AmmConfig address:", configAddress.toString());
   const [poolAddress, _bump1] = await getPoolAddress(
     configAddress,
     token0,
     token1,
     ClmmProgram
   );
+  console.log("Pool address:", poolAddress.toString());
+
   const [vault0, _bump2] = await getPoolVaultAddress(
     poolAddress,
     token0,
@@ -98,6 +139,38 @@ export async function initialize(
     poolAddress,
     ClmmProgram
   );
+
+  console.log("Transaction accounts:", {
+    clmmProgram: ClmmProgram.toString(),
+    poolCreator: creator.publicKey.toString(),
+    ammConfig: configAddress.toString(),
+    poolState: poolAddress.toString(),
+    tokenMint0: token0.toString(),
+    tokenMint1: token1.toString(),
+    tokenVault0: vault0.toString(),
+    tokenVault1: vault1.toString(),
+    observationState: observation.toString(),
+    tickArrayBitmap: tick_array_bitmap.toString(),
+    tokenProgram0: token0Program.toString(),
+    tokenProgram1: token1Program.toString(),
+    systemProgram: SystemProgram.programId.toString(),
+    rent: SYSVAR_RENT_PUBKEY.toString(),
+    bitmapExtension: bitmapExtension.toString(),
+  });
+
+  // 这里执行前能不能用脚本判断地址都是否存在？
+  // 这里执行前检查账户是否存在
+  await checkAccountsExistence(program.provider.connection, [
+    { name: "clmmProgram", pubkey: ClmmProgram },
+    { name: "ammConfig", pubkey: configAddress },
+    { name: "tokenMint0", pubkey: token0 },
+    { name: "tokenMint1", pubkey: token1 },
+    { name: "poolState", pubkey: poolAddress }, // 这个应该不存在，因为它将被创建
+    { name: "tokenVault0", pubkey: vault0 }, // 这个应该不存在，因为它将被创建
+    { name: "tokenVault1", pubkey: vault1 }, // 这个应该不存在，因为它将被创建
+    { name: "observationState", pubkey: observation }, // 这个应该不存在，因为它将被创建
+    { name: "tickArrayBitmap", pubkey: tick_array_bitmap }, // 这个应该不存在，因为它将被创建
+  ]);
 
   const tx = await program.methods
     .proxyInitialize(SqrtPriceMath.getSqrtPriceX64FromTick(initTick), new BN(0))

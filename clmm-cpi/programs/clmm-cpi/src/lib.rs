@@ -2,7 +2,7 @@ use anchor_lang::prelude::*;
 pub mod instructions;
 use instructions::*;
 
-declare_id!("8wGnAiSXYK31kdas6qNgfr8N3pzHoBEAaDK824qgYE81");
+declare_id!("2sWMYoE5eWux61AEdquwP6Mi6dZLNCxSwvfMcoC2T5Dc");
 
 #[program]
 pub mod clmm_cpi {

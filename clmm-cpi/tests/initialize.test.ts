@@ -20,6 +20,12 @@ describe("initialize test", () => {
         { transferFeeBasisPoints: 0, MaxFee: 0 },
         confirmOptions
       );
+    
+    // 打印代币地址
+    console.log("Token0 address:", token0.toString());
+    console.log("Token1 address:", token1.toString());
+    console.log("Token0 program:", token0Program.toString());
+    console.log("Token1 program:", token1Program.toString());
 
     const { poolAddress, tx } = await initialize(
       program,
