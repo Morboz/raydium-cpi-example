@@ -1320,7 +1320,7 @@ tr46@~0.0.3:
   resolved "https://registry.npmmirror.com/tr46/-/tr46-0.0.3.tgz"
   integrity sha512-N3WMsuqV66lT30CrXNbEjx4GEwlow3v6rr4mCcv6prnfwhS01rkgyFdjPNBYd9br7LpXV1+Emh01fHnq2Gdgrw==
 
-ts-mocha@^10.0.0:
+ts-mocha@^10.1.0:
   version "10.1.0"
   resolved "https://registry.npmmirror.com/ts-mocha/-/ts-mocha-10.1.0.tgz"
   integrity sha512-T0C0Xm3/WqCuF2tpa0GNGESTBoKZaiqdUP8guNv4ZY316AFXlyidnrzQ1LUrCT0Wb1i3J0zFTgOh/55Un44WdA==
