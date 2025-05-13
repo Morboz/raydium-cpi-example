@@ -3,7 +3,7 @@ use anchor_lang::prelude::*;
 pub mod instructions;
 use instructions::*;
 
-declare_id!("GnCY3X3sFSTd5tNygUNuKQkXee5CUuJJwPuk4Lfqgjyh");
+declare_id!("2u4Hw4dPsb7niPchcP827TLGG5yZ58wj2qEfrcMFNqmN");
 
 #[program]
 pub mod cpmm_cpi_example {

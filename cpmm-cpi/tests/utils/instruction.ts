@@ -15,6 +15,7 @@ import {
   TOKEN_PROGRAM_ID,
   TOKEN_2022_PROGRAM_ID,
   getAssociatedTokenAddressSync,
+  createApproveInstruction,
 } from "@solana/spl-token";
 import {
   getAuthAddress,
@@ -587,6 +588,55 @@ export async function swap_base_input(
     cpSwapProgram
   );
 
+  // 创建授权指令 - 批准程序动用代币
+  console.log("inputTokenAccount:", inputTokenAccount.toString());
+  console.log("auth:", auth.toString());
+  console.log("owner:", owner.publicKey.toString());
+  console.log("amount_in:", amount_in.toNumber());
+
+  // 检查代币账户是否存在，并获取余额
+  try {
+    const accountInfo = await program.provider.connection.getAccountInfo(inputTokenAccount);
+    console.log("输入代币账户存在?", !!accountInfo);
+
+    // 如果账户不存
+    if (!accountInfo) {
+      // 报错
+      console.error("输入代币账户不存在!");
+      throw new Error("Input token account does not exist");
+    }
+
+    // 获取当前代币余额
+    const tokenAmount = await program.provider.connection.getTokenAccountBalance(inputTokenAccount);
+    console.log("输入代币余额:", tokenAmount?.value?.uiAmount);
+    
+    // 确保余额足够
+    if (!tokenAmount || tokenAmount.value.uiAmount < amount_in.toNumber() / 10**9) {
+      console.error("输入代币余额不足!");
+      throw new Error("Insufficient input token balance");
+    }
+
+  } catch (e) {
+    console.error("检查代币账户时出错:", e);
+    throw e;
+  }
+
+  // 然后再创建授权指令
+  let approveInstruction;
+  try {
+    approveInstruction = createApproveInstruction(
+      inputTokenAccount,
+      auth,
+      owner.publicKey,
+      amount_in.toNumber() * 2,
+      [],
+      inputTokenProgram  // 使用正确的代币程序
+    );
+  } catch (e) {
+    console.error("创建授权指令出错:", e);
+    throw e;
+  }
+
   const tx = await program.methods
     .proxySwapBaseInput(amount_in, minimum_amount_out)
     .accounts({
@@ -606,6 +656,7 @@ export async function swap_base_input(
       observationState: observationAddress,
     })
     .preInstructions([
+      approveInstruction,    // 添加授权指令
       ComputeBudgetProgram.setComputeUnitLimit({ units: 400000 }),
     ])
     .rpc(confirmOptions);

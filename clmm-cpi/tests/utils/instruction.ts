@@ -31,9 +31,6 @@ import {
   getTickArrayBitmapAddress,
 } from "./pda";
 
-// 添加到文件顶部的 import 部分
-import { AccountInfo } from "@solana/web3.js";
-
 
 // 在 initialize 函数内添加此函数调用
 async function checkAccountsExistence(
@@ -320,4 +317,172 @@ export async function openPosition(
     .rpc(confirmOptions);
 
   return { positionNftMint, personalPosition, protocolPosition, tx };
+}
+
+export async function swap(
+  program: Program<ClmmCpi>,
+  owner: Signer,
+  poolKeys: ClmmKeys,
+  amount: BN,
+  otherAmountThreshold: BN, 
+  sqrtPriceLimitX64: BN,
+  isBaseInput: boolean,
+  confirmOptions?: ConfirmOptions
+) {
+  // 获取代币账户地址
+  const inputTokenAccount = isBaseInput
+    ? getAssociatedTokenAddressSync(
+        new PublicKey(poolKeys.mintA.address),
+        owner.publicKey,
+        false,
+        new PublicKey(poolKeys.mintA.programId)
+      )
+    : getAssociatedTokenAddressSync(
+        new PublicKey(poolKeys.mintB.address),
+        owner.publicKey,
+        false,
+        new PublicKey(poolKeys.mintB.programId)
+      );
+
+  const outputTokenAccount = isBaseInput
+    ? getAssociatedTokenAddressSync(
+        new PublicKey(poolKeys.mintB.address),
+        owner.publicKey,
+        false,
+        new PublicKey(poolKeys.mintB.programId)
+      )
+    : getAssociatedTokenAddressSync(
+        new PublicKey(poolKeys.mintA.address),
+        owner.publicKey,
+        false,
+        new PublicKey(poolKeys.mintA.programId)
+      );
+
+  // 确定哪个是输入和输出代币仓库
+  const inputVault = isBaseInput
+    ? new PublicKey(poolKeys.vault.A)
+    : new PublicKey(poolKeys.vault.B);
+
+  const outputVault = isBaseInput
+    ? new PublicKey(poolKeys.vault.B)
+    : new PublicKey(poolKeys.vault.A);
+
+  // 获取输入和输出代币铸币厂地址
+  const inputVaultMint = isBaseInput
+    ? new PublicKey(poolKeys.mintA.address)
+    : new PublicKey(poolKeys.mintB.address);
+
+  const outputVaultMint = isBaseInput
+    ? new PublicKey(poolKeys.mintB.address)
+    : new PublicKey(poolKeys.mintA.address);
+
+  // 获取观察状态账户地址
+  const observationState = poolKeys.observationId;
+
+  // 获取滴答数组地址 - 我们使用第一个滴答数组
+  let tickArray: PublicKey;
+  
+  try {
+    // 方法 1: 首先尝试从 poolKeys.tickArrays 获取
+    if (poolKeys.tickArrays && poolKeys.tickArrays.length > 0) {
+      console.log("Using existing tick array from poolKeys");
+      tickArray = new PublicKey(poolKeys.tickArrays[0]);
+    }
+    // 方法 2: 尝试从池状态读取当前 tick
+    else if (poolKeys.currentTickIndex !== undefined) {
+      console.log("Using current tick index from poolKeys:", poolKeys.currentTickIndex);
+      const tickArrayStartIndex = TickUtils.getTickArrayStartIndexByTick(
+        poolKeys.currentTickIndex,
+        poolKeys.config.tickSpacing
+      );
+      console.log("Calculated tick array start index:", tickArrayStartIndex);
+      
+      const [tickArrayAddr] = await getTickArrayAddress(
+        new PublicKey(poolKeys.id),
+        ClmmProgram,
+        tickArrayStartIndex
+      );
+      tickArray = tickArrayAddr;
+    }
+    // 方法 3: 使用 0 作为起始索引的 tick array
+    else {
+      console.log("No tick information available, using default tick array with start index 0");
+      const [tickArrayAddr] = await getTickArrayAddress(
+        new PublicKey(poolKeys.id),
+        ClmmProgram,
+        0
+      );
+      tickArray = tickArrayAddr;
+    }
+    
+    console.log("Using tick array:", tickArray.toString());
+  } catch (error) {
+    console.error("Error determining tick array:", error);
+    throw new Error("Failed to determine tick array: " + error.message);
+  }
+  
+  console.log("Using tick array:", tickArray.toString());
+  
+  // memo程序地址
+  const memoProgram = new PublicKey("MemoSq4gqABAXKb96qnH8TysNcWxMyWCqXgDLGmfcHr");
+
+  // 获取池状态
+  const poolState = new PublicKey(poolKeys.id);
+
+  // 获取AMM配置
+  const ammConfig = new PublicKey(poolKeys.ammConfig);
+
+  // 获取扩展账户地址
+  const [bitmapExtension] = await getTickArrayBitmapAddress(
+    poolState,
+    ClmmProgram
+  );
+
+  console.log("Swap accounts:", {
+    poolState: poolState.toString(),
+    ammConfig: ammConfig.toString(),
+    inputTokenAccount: inputTokenAccount.toString(),
+    outputTokenAccount: outputTokenAccount.toString(),
+    inputVault: inputVault.toString(),
+    outputVault: outputVault.toString(),
+    inputVaultMint: inputVaultMint.toString(),
+    outputVaultMint: outputVaultMint.toString(),
+    observationState: observationState.toString(),
+    tickArray: tickArray.toString(),
+  });
+
+  const tx = await program.methods
+    .proxySwap(
+      amount,
+      otherAmountThreshold,
+      sqrtPriceLimitX64,
+      isBaseInput
+    )
+    .accounts({
+      clmmProgram: ClmmProgram,
+      payer: owner.publicKey,
+      amm_config: ammConfig,
+      poolState: poolState,
+      inputTokenAccount: inputTokenAccount,
+      outputTokenAccount: outputTokenAccount,
+      inputVault: inputVault,
+      outputVault: outputVault,
+      observationState: observationState,
+      tokenProgram: TOKEN_PROGRAM_ID,
+      tokenProgram2022: TOKEN_2022_PROGRAM_ID,
+      memoProgram: memoProgram,
+      inputVaultMint: inputVaultMint,
+      outputVaultMint: outputVaultMint,
+    })
+    .remainingAccounts([
+      { pubkey: bitmapExtension, isSigner: false, isWritable: true },
+      { pubkey: tickArray, isSigner: false, isWritable: true },
+    ])
+    .preInstructions([
+      ComputeBudgetProgram.setComputeUnitLimit({ units: 400000 }),
+    ])
+    .signers([owner])
+    .rpc(confirmOptions);
+
+  return { tx };
 }

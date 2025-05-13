@@ -5,7 +5,7 @@ seeds = false
 skip-lint = false
 
 [programs.localnet]
-cpmm_cpi_example = "GnCY3X3sFSTd5tNygUNuKQkXee5CUuJJwPuk4Lfqgjyh"
+cpmm_cpi_example = "2u4Hw4dPsb7niPchcP827TLGG5yZ58wj2qEfrcMFNqmN"
 
 [registry]
 url = "https://github.com/raydium-io/raydium-cpi-example"
